@@ -1,15 +1,18 @@
 'use client';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, use } from 'react';
 import { Play, Pause, SkipBack, SkipForward, Volume2 } from 'lucide-react';
 
-function MusicPlayer({ src, onNext, onPrevious }) {
+function MusicPlayer({ src, onNext, onPrevious, onTimeUpdate, onSeek }) {
+
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [seekValue, setSeekValue] = useState(0);
     const [volume, setVolume] = useState(1);
     const audioRef = useRef(null);
-
+    useEffect(() => {
+        console.log("src:", src);
+    }, [src]);
     // 初始化音频事件监听
     useEffect(() => {
         const audio = audioRef.current;
@@ -20,23 +23,18 @@ function MusicPlayer({ src, onNext, onPrevious }) {
         }
 
         const handleLoadedMetadata = () => {
-            console.log('Audio loaded metadata:');
             console.log('Duration:', audio.duration);
             setDuration(audio.duration);
         };
 
         const handleTimeUpdate = () => {
-            console.log('Audio time update:');
-            console.log('Current Time:', audio.currentTime);
             setCurrentTime(audio.currentTime);
             setSeekValue((audio.currentTime / audio.duration) * 100);
         };
 
         const handleEnded = () => {
-            console.log('Audio playback ended');
             setIsPlaying(false);
             if (onNext) {
-                console.log('Triggering next track...');
                 onNext();
             }
         };
@@ -69,10 +67,8 @@ function MusicPlayer({ src, onNext, onPrevious }) {
         }
 
         if (isPlaying) {
-            console.log('Pausing audio...');
             audio.pause();
         } else {
-            console.log('Playing audio...');
             audio.play().catch((error) => {
                 console.error('Error playing audio:', error);
                 setIsPlaying(false);
@@ -83,6 +79,7 @@ function MusicPlayer({ src, onNext, onPrevious }) {
 
     // 跳转进度
     const handleSeekChange = (e) => {
+        console.log('Seek change event:', e.target.value);
         const value = parseFloat(e.target.value);
         const seekTime = (value / 100) * duration;
         const audio = audioRef.current;
@@ -92,7 +89,6 @@ function MusicPlayer({ src, onNext, onPrevious }) {
             return;
         }
 
-        console.log('Seeking to:', seekTime);
         audio.currentTime = seekTime;
         setSeekValue(value);
     };
@@ -112,9 +108,20 @@ function MusicPlayer({ src, onNext, onPrevious }) {
         audio.volume = value;
     };
 
+    // 在音频元素上添加 timeupdate 事件监听
+    const handleTimeUpdate = (e) => {
+        const time = e.target.currentTime;
+        onTimeUpdate && onTimeUpdate(time);
+    };
+
     return (
         <div className="bg-white shadow-lg rounded-lg p-6 w-full max-w-md mx-auto mt-10">
-            <audio ref={audioRef} src={src} preload="metadata" />
+            <audio
+                ref={audioRef}
+                src={src}
+                preload="metadata"
+                onTimeUpdate={handleTimeUpdate}
+            />
 
             <div className="flex items-center justify-center mb-4">
                 <button
